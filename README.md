@@ -39,6 +39,18 @@ Implemented JSON-RPC 2.0 projection:
   - `-32001` permission denied;
   - `-32603` internal error.
 
+## Core Stream Projection
+
+English: stream-capable methods are discovered from `inspect_application(app)`.
+When core returns `StreamResult`, JSON-RPC responds with a stable result
+envelope: `{"stream": {"ok": bool, "events": [...]}}`. Each item is projected
+from a core `StreamEvent`; JSON-RPC does not own a separate stream model.
+
+Русский: stream-capable methods обнаруживаются через `inspect_application(app)`.
+Когда core возвращает `StreamResult`, JSON-RPC отдаёт стабильный result
+envelope: `{"stream": {"ok": bool, "events": [...]}}`. Каждый item проецируется
+из core `StreamEvent`; JSON-RPC не владеет отдельной stream model.
+
 ### Run tests
 
 ```bash

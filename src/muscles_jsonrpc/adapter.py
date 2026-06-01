@@ -39,13 +39,14 @@ class JsonRpcAdapter:
             transports = action.get("transports") or []
             if transports and "jsonrpc" not in transports:
                 continue
-            methods.append(
-                {
-                    "name": name,
-                    "description": action.get("description", ""),
-                    "params_schema": action.get("input_schema", {"type": "object", "properties": {}}),
-                }
-            )
+            method = {
+                "name": name,
+                "description": action.get("description", ""),
+                "params_schema": action.get("input_schema", {"type": "object", "properties": {}}),
+            }
+            if action.get("stream_output"):
+                method["stream"] = action.get("stream", {"enabled": True})
+            methods.append(method)
         return methods
 
     def handle(self, request: dict[str, Any] | list[Any]) -> dict[str, Any] | list[dict[str, Any]] | None:
@@ -80,6 +81,8 @@ class JsonRpcAdapter:
             result = ActionDispatcher(self._app).execute(request["method"], params, transport="jsonrpc")
             if is_notification:
                 return None
+            if result.is_stream:
+                return {"jsonrpc": JSONRPC_VERSION, "id": req_id, "result": self._stream_result(result.value)}
             return {"jsonrpc": JSONRPC_VERSION, "id": req_id, "result": result.value}
         except Exception as exc:
             if is_notification:
@@ -112,6 +115,25 @@ class JsonRpcAdapter:
         if isinstance(exc, JsonRpcError):
             return exc
         return None
+
+    @staticmethod
+    def _stream_result(stream_result: Any) -> dict[str, Any]:
+        from muscles.core import stream_events
+
+        events = []
+        ok = True
+        for event in stream_events(stream_result):
+            if event.type == "error":
+                ok = False
+            events.append(
+                {
+                    "event": event.type,
+                    "data": event.data,
+                    "id": event.event_id,
+                    "metadata": dict(event.metadata),
+                }
+            )
+        return {"stream": {"ok": ok, "events": events}}
 
     @staticmethod
     def _error(req_id: Any, code: int, message: str, data: dict[str, Any] | None = None) -> dict[str, Any]:

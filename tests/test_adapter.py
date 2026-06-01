@@ -3,6 +3,8 @@ from muscles.core import (
     ApplicationMeta,
     BaseStrategy,
     Context,
+    StreamEvent,
+    StreamResult,
     register_action,
 )
 
@@ -221,3 +223,84 @@ def test_jsonrpc_state_is_scoped_to_application_instance():
 
     assert [method["name"] for method in methods_a] == ["bookings.create"]
     assert [method["name"] for method in methods_b] == ["tasks.create"]
+
+
+def test_jsonrpc_list_result_stays_regular_result_not_stream():
+    app, _ = _build_app(handler=lambda payload, context: [{"id": 1}])
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle({"jsonrpc": "2.0", "id": 10, "method": "bookings.create", "params": {"title": "Call"}})
+
+    assert response == {"jsonrpc": "2.0", "id": 10, "result": [{"id": 1}]}
+
+
+def test_jsonrpc_method_list_includes_core_stream_metadata_for_stream_actions():
+    app, _ = _build_app()
+    register_action(
+        app,
+        name="bookings.stream",
+        input_schema={"type": "object", "properties": {}},
+        transports=["jsonrpc"],
+        stream_output=True,
+        stream_metadata={"event_types": ["progress", "result"]},
+        handler=lambda payload, context: StreamResult(source=[]),
+    )
+
+    methods = JsonRpcAdapter.from_application(app).list_methods()
+    stream_method = next(method for method in methods if method["name"] == "bookings.stream")
+
+    assert stream_method["stream"]["enabled"] is True
+    assert stream_method["stream"]["event_types"] == ["progress", "result"]
+
+
+def test_jsonrpc_stream_result_projects_core_events_once():
+    calls = []
+
+    def stream_booking(payload, context):
+        calls.append((payload, context.transport))
+        return StreamResult(
+            source=[
+                StreamEvent(type="progress", data={"step": 1}, event_id="evt-1"),
+                StreamEvent(type="result", data={"ok": True}),
+            ]
+        )
+
+    app, _ = _build_app(handler=stream_booking)
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle({"jsonrpc": "2.0", "id": 11, "method": "bookings.create", "params": {"title": "Call"}})
+
+    assert calls == [({"title": "Call"}, "jsonrpc")]
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "result": {
+            "stream": {
+                "ok": True,
+                "events": [
+                    {"event": "progress", "data": {"step": 1}, "id": "evt-1", "metadata": {}},
+                    {"event": "result", "data": {"ok": True}, "id": None, "metadata": {}},
+                ],
+            }
+        },
+    }
+
+
+def test_jsonrpc_stream_error_event_stays_in_stream_envelope():
+    def stream_booking(payload, context):
+        def source():
+            yield StreamEvent(type="progress", data={"step": 1})
+            raise RuntimeError("stream failed")
+
+        return StreamResult(source=source())
+
+    app, _ = _build_app(handler=stream_booking)
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle({"jsonrpc": "2.0", "id": 12, "method": "bookings.create", "params": {"title": "Call"}})
+
+    stream = response["result"]["stream"]
+    assert stream["ok"] is False
+    assert stream["events"][0]["event"] == "progress"
+    assert stream["events"][1]["event"] == "error"
+    assert stream["events"][1]["data"]["code"] == "stream_error"
