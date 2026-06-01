@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "muscles-jsonrpc"
+version = "1.0.0"
+description = "JSON-RPC adapter for Muscles actions"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["muscles @ git+https://github.com/butkoden/muscles.git"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
