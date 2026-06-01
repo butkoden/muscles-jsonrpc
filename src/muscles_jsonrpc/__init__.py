@@ -1,3 +1,3 @@
-from .adapter import JsonRpcAdapter, JsonRpcError
+from .adapter import JsonRpcAdapter, JsonRpcError, JsonRpcServer
 
-__all__ = ["JsonRpcAdapter", "JsonRpcError"]
+__all__ = ["JsonRpcAdapter", "JsonRpcError", "JsonRpcServer"]
