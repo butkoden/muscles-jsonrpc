@@ -19,3 +19,20 @@ while preserving the same schemas, rules, and context used by other runtimes.
 
 Implement a minimal JSON-RPC 2.0 endpoint around Muscles actions with typed
 request/response contracts and deterministic error mapping.
+
+## Current Stage (Issue #1)
+
+Implemented minimal JSON-RPC 2.0 adapter:
+
+- request validation (`jsonrpc`, `method`, `params`);
+- deterministic error mapping:
+  - `-32600` invalid request;
+  - `-32601` method not found;
+  - `-32602` invalid params;
+  - `-32603` internal error.
+
+### Run tests
+
+```bash
+python -m pytest -q
+```
