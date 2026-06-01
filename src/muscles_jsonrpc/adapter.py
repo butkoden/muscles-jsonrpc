@@ -70,6 +70,8 @@ class JsonRpcAdapter:
         if params is None:
             params = {}
         if not isinstance(params, dict):
+            if is_notification:
+                return None
             return self._error(req_id, -32602, "Invalid params")
 
         try:

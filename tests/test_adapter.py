@@ -162,6 +162,15 @@ def test_jsonrpc_notification_returns_none_but_dispatches():
     assert calls == [("bookings.create", {"title": "Notify"}, "jsonrpc")]
 
 
+def test_jsonrpc_invalid_notification_returns_none():
+    app, _ = _build_app()
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle({"jsonrpc": "2.0", "method": "bookings.create", "params": []})
+
+    assert response is None
+
+
 def test_jsonrpc_batch_dispatches_each_request_without_bypassing_core():
     app, calls = _build_app()
     adapter = JsonRpcAdapter.from_application(app)
