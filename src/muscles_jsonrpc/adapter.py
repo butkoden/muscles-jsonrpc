@@ -5,6 +5,7 @@ from typing import Any
 
 
 JSONRPC_VERSION = "2.0"
+DISCOVERY_METHODS = {"rpc.discover", "rpc.methods"}
 
 
 @dataclass(frozen=True)
@@ -73,11 +74,24 @@ class JsonRpcAdapter:
             if is_notification:
                 return None
             return self._error(req_id, -32602, "Invalid params")
+        if request["method"] in DISCOVERY_METHODS:
+            if is_notification:
+                return None
+            return {"jsonrpc": JSONRPC_VERSION, "id": req_id, "result": self.list_methods()}
 
         try:
             from muscles.core import ActionDispatcher
 
             result = ActionDispatcher(self._app).execute(request["method"], params, transport="jsonrpc")
+            if result.is_stream:
+                raise JsonRpcError(
+                    -32002,
+                    "Streaming not supported",
+                    {
+                        "action": request["method"],
+                        "reason": "Use a stream-capable projection such as SSE or MCP for stream actions.",
+                    },
+                )
             if is_notification:
                 return None
             return {"jsonrpc": JSONRPC_VERSION, "id": req_id, "result": result.value}

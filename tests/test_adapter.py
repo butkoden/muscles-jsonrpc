@@ -3,6 +3,7 @@ from muscles.core import (
     ApplicationMeta,
     BaseStrategy,
     Context,
+    StreamResult,
     register_action,
 )
 
@@ -87,6 +88,24 @@ def test_jsonrpc_method_list_comes_from_inspect_contract_and_transport_filter():
     ]
 
 
+def test_jsonrpc_discovery_method_returns_action_surface():
+    app, _ = _build_app()
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle({"jsonrpc": "2.0", "id": "discover", "method": "rpc.discover"})
+
+    assert response == {"jsonrpc": "2.0", "id": "discover", "result": adapter.list_methods()}
+
+
+def test_jsonrpc_methods_alias_returns_action_surface():
+    app, _ = _build_app()
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle({"jsonrpc": "2.0", "id": "methods", "method": "rpc.methods"})
+
+    assert response == {"jsonrpc": "2.0", "id": "methods", "result": adapter.list_methods()}
+
+
 def test_jsonrpc_method_not_found_maps_core_error():
     app, _ = _build_app()
     adapter = JsonRpcAdapter.from_application(app)
@@ -150,6 +169,29 @@ def test_jsonrpc_execution_error_for_async_handler():
     response = adapter.handle({"jsonrpc": "2.0", "id": 4, "method": "bookings.create", "params": {"title": "Call"}})
 
     assert response["error"]["code"] == -32603
+
+
+def test_jsonrpc_stream_action_returns_explicit_unsupported_error():
+    app, _ = _build_app()
+
+    def stream_booking(payload, context):
+        return StreamResult(source=[])
+
+    register_action(
+        app,
+        name="bookings.stream",
+        input_schema=BOOKING_INPUT_SCHEMA,
+        transports=["jsonrpc"],
+        stream_output=True,
+        handler=stream_booking,
+    )
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle({"jsonrpc": "2.0", "id": 9, "method": "bookings.stream", "params": {"title": "Live"}})
+
+    assert response["error"]["code"] == -32002
+    assert response["error"]["message"] == "Streaming not supported"
+    assert response["error"]["data"]["action"] == "bookings.stream"
 
 
 def test_jsonrpc_notification_returns_none_but_dispatches():
