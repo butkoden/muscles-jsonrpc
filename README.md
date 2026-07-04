@@ -6,6 +6,14 @@ This package makes Muscles action-first applications callable over JSON-RPC
 while preserving the same schemas, rules, dispatcher, and context used by other
 projections.
 
+## Related Repositories
+
+- [`muscles`](https://github.com/butkoden/muscles) - core action contracts, dispatcher and inspect contract.
+- [`muscles-cli`](https://github.com/butkoden/muscles-cli) - CLI action inspection and execution over the same contracts.
+- [`muscles-mcp`](https://github.com/butkoden/muscles-mcp) - MCP projection over the same action model.
+- [`muscles-sse`](https://github.com/butkoden/muscles-sse) - streaming projection for action output.
+- [`muscles-benchmarks`](https://github.com/butkoden/muscles-benchmarks) - protocol projection regression checks.
+
 ## Concept Guardrails
 
 - JSON-RPC is a protocol projection, not a new framework layer.
