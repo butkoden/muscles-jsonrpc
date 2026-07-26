@@ -7,8 +7,9 @@ name = "muscles-jsonrpc"
 version = "1.0.0"
 description = "JSON-RPC adapter for Muscles actions"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.10"
-dependencies = ["muscles @ git+https://github.com/butkoden/muscles.git"]
+dependencies = ["muscles>=1.0.0rc1,<2.0.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
