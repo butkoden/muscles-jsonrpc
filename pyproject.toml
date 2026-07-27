@@ -11,5 +11,17 @@ license = "MIT"
 requires-python = ">=3.10"
 dependencies = ["muscles>=1.0.0rc1,<2.0.0"]
 
+[project.urls]
+Homepage = "https://github.com/butkoden/muscles-jsonrpc"
+Repository = "https://github.com/butkoden/muscles-jsonrpc"
+Documentation = "https://github.com/butkoden/muscles-jsonrpc#readme"
+PyPI = "https://pypi.org/project/muscles-jsonrpc/"
+Releases = "https://github.com/butkoden/muscles-jsonrpc/releases"
+"muscles" = "https://pypi.org/project/muscles/"
+"muscles-cli" = "https://pypi.org/project/muscles-cli/"
+"muscles-mcp" = "https://pypi.org/project/muscles-mcp/"
+"muscles-sse" = "https://pypi.org/project/muscles-sse/"
+"muscles-benchmarks" = "https://pypi.org/project/muscles-benchmarks/"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
