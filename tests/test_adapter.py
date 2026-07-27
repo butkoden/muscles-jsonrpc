@@ -171,6 +171,21 @@ def test_jsonrpc_execution_error_for_async_handler():
     assert response["error"]["code"] == -32603
 
 
+def test_jsonrpc_rejects_non_serializable_result_with_stable_internal_error():
+    app, _ = _build_app(handler=lambda payload, context: object())
+    adapter = JsonRpcAdapter.from_application(app)
+
+    response = adapter.handle(
+        {"jsonrpc": "2.0", "id": 11, "method": "bookings.create", "params": {"title": "Call"}}
+    )
+
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "error": {"code": -32603, "message": "Internal error"},
+    }
+
+
 def test_jsonrpc_stream_action_returns_explicit_unsupported_error():
     app, _ = _build_app()
 
