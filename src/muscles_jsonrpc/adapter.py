@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import Any
 
 
@@ -94,7 +95,11 @@ class JsonRpcAdapter:
                 )
             if is_notification:
                 return None
-            return {"jsonrpc": JSONRPC_VERSION, "id": req_id, "result": result.value}
+            return {
+                "jsonrpc": JSONRPC_VERSION,
+                "id": req_id,
+                "result": self._json_value(result.value),
+            }
         except Exception as exc:
             if is_notification:
                 return None
@@ -122,7 +127,7 @@ class JsonRpcAdapter:
         if isinstance(exc, ActionPermissionDenied):
             return JsonRpcError(-32001, "Permission denied", {"reason": exc.message, "data": exc.data})
         if isinstance(exc, ActionExecutionError):
-            return JsonRpcError(-32603, "Internal error", {"reason": exc.message, "data": exc.data})
+            return JsonRpcError(-32603, "Internal error")
         if isinstance(exc, JsonRpcError):
             return exc
         return None
@@ -133,6 +138,12 @@ class JsonRpcAdapter:
         if data is not None:
             payload["error"]["data"] = data
         return payload
+
+    @staticmethod
+    def _json_value(value: Any) -> Any:
+        """Validate the JSON-RPC result without silently stringifying values."""
+
+        return json.loads(json.dumps(value, ensure_ascii=False))
 
 
 JsonRpcServer = JsonRpcAdapter
