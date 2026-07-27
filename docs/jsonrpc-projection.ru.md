@@ -40,6 +40,33 @@ response.
 Batch requests dispatch-ят каждый item через тот же core path. Notification
 items не попадают в batch response.
 
+## Streaming
+
+Actions с `stream_output=True` проецируются через общий core stream contract.
+JSON-RPC response сохраняет request id и возвращает стабильный envelope
+`result.stream`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "stream": {
+      "ok": true,
+      "events": [
+        {"event": "progress", "data": {"step": 1}, "id": "evt-1", "metadata": {}},
+        {"event": "result", "data": {"ok": true}, "id": null, "metadata": {}}
+      ]
+    }
+  }
+}
+```
+
+Core events `progress`, `log`, `result` и `error` сохраняют тип и payload.
+Ошибка внутри stream становится `error` event и устанавливает
+`stream.ok=false`. Списки и tuple, возвращённые non-stream action, остаются
+обычными JSON-RPC results и никогда не трактуются как stream.
+
 ## Error mapping
 
 - invalid request -> `-32600`;

@@ -31,7 +31,7 @@ Implement a JSON-RPC 2.0 projection around Muscles actions with typed
 request/response contracts, deterministic error mapping, notifications, and
 batch dispatch.
 
-## Current Stage (Issue #1)
+## Current Stage (Issues #1 and #3)
 
 Implemented JSON-RPC 2.0 projection:
 
@@ -40,12 +40,17 @@ Implemented JSON-RPC 2.0 projection:
 - dispatch through `ActionDispatcher(..., transport="jsonrpc")`;
 - notification calls;
 - batch calls;
+- core stream projection with stable `result.stream` envelopes;
 - deterministic error mapping:
   - `-32600` invalid request;
   - `-32601` method not found;
   - `-32602` invalid params;
   - `-32001` permission denied;
   - `-32603` internal error.
+
+Stream actions expose core `progress`, `log`, `result`, and `error` events in a
+JSON-serializable envelope. Non-stream list and tuple results keep ordinary
+JSON-RPC semantics.
 
 ### Run tests
 

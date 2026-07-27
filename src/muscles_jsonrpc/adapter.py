@@ -41,13 +41,14 @@ class JsonRpcAdapter:
             transports = action.get("transports") or []
             if transports and "jsonrpc" not in transports:
                 continue
-            methods.append(
-                {
-                    "name": name,
-                    "description": action.get("description", ""),
-                    "params_schema": action.get("input_schema", {"type": "object", "properties": {}}),
-                }
-            )
+            method = {
+                "name": name,
+                "description": action.get("description", ""),
+                "params_schema": action.get("input_schema", {"type": "object", "properties": {}}),
+            }
+            if action.get("stream_output"):
+                method["stream"] = action.get("stream", {"enabled": True})
+            methods.append(method)
         return methods
 
     def handle(self, request: dict[str, Any] | list[Any]) -> dict[str, Any] | list[dict[str, Any]] | None:
@@ -84,17 +85,11 @@ class JsonRpcAdapter:
             from muscles.core import ActionDispatcher
 
             result = ActionDispatcher(self._app).execute(request["method"], params, transport="jsonrpc")
-            if result.is_stream:
-                raise JsonRpcError(
-                    -32002,
-                    "Streaming not supported",
-                    {
-                        "action": request["method"],
-                        "reason": "Use a stream-capable projection such as SSE or MCP for stream actions.",
-                    },
-                )
+            stream_result = self._stream_result(result.value) if result.is_stream else None
             if is_notification:
                 return None
+            if stream_result is not None:
+                return {"jsonrpc": JSONRPC_VERSION, "id": req_id, "result": stream_result}
             return {
                 "jsonrpc": JSONRPC_VERSION,
                 "id": req_id,
@@ -131,6 +126,41 @@ class JsonRpcAdapter:
         if isinstance(exc, JsonRpcError):
             return exc
         return None
+
+    @classmethod
+    def _stream_result(cls, stream_result: Any) -> dict[str, Any]:
+        """Project core stream events into a deterministic JSON-RPC result envelope."""
+
+        from muscles.core import stream_events
+
+        events: list[dict[str, Any]] = []
+        ok = True
+        for event in stream_events(stream_result):
+            if event.type == "error":
+                ok = False
+            try:
+                data = cls._json_value(event.data)
+                metadata = cls._json_value(dict(event.metadata))
+            except (TypeError, ValueError) as exc:
+                ok = False
+                events.append(
+                    {
+                        "event": "error",
+                        "data": {"code": "stream_error", "message": str(exc)},
+                        "id": None,
+                        "metadata": {},
+                    }
+                )
+                break
+            events.append(
+                {
+                    "event": event.type,
+                    "data": data,
+                    "id": event.event_id,
+                    "metadata": metadata,
+                }
+            )
+        return {"stream": {"ok": ok, "events": events}}
 
     @staticmethod
     def _error(req_id: Any, code: int, message: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
