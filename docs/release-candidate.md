@@ -1,8 +1,8 @@
 # JSON-RPC RC checklist
 
 The projection is released only when its contract tests pass for single calls,
-notifications, batches, invalid requests, permissions, stream rejection and
-non-serializable results:
+notifications, batches, invalid requests, permissions, core stream projection,
+stream errors, non-stream list results and non-serializable results:
 
 ```bash
 PYTHONPATH=../muscles/src:src python -m pytest -q
